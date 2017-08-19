@@ -146,16 +146,16 @@ function getAndShowInput() {
    endShape();
    userInput = amps;
 
-   var d = color(100);
-   stroke(d);
-   strokeWeight(1);
-   beginShape();
-   for (i = 0; i<angs.length; i++) {      
-      var vx = map(i, 0, angs.length, 0, width);
-      // vertex(vx, map(angs[i], 0, 360, height, height/2));
-      vertex(vx, map(angs[i], 1, 4, height, height/2));
-   }
-   endShape();
+   // var d = color(100);
+   // stroke(d);
+   // strokeWeight(1);
+   // beginShape();
+   // for (i = 0; i<angs.length; i++) {      
+   //    var vx = map(i, 0, angs.length, 0, width);
+   //    // vertex(vx, map(angs[i], 0, 360, height, height/2));
+   //    vertex(vx, map(angs[i], 1, 4, height, height/2));
+   // }
+   // endShape();
 
    // var vals = new Array();
    // var freqBins = new Array("bass", "lowMid", "mid", "highMid", "treble");
