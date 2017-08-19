@@ -124,6 +124,7 @@ function mouseClicked() {
    setDecoder();
    restartTrial();
    score = 0;
+   ntrials = 0;
 }
 
 function restartTrial() {
