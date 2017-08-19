@@ -1,7 +1,7 @@
 var mic, fft, pos, vel, A, B, c, trgPos;
 var gain = 0.001;
-var canvasWidth = 1200;
-var canvasHeight = 600;
+var canvasWidth = 700;
+var canvasHeight = 500;
 var circRadius = 25;
 var trgRadius = 50;
 var trgDistance = 200;
@@ -14,8 +14,10 @@ var userInput;
 var nInputDims = 1024; // spectrum.length
 
 function setup() {
-   createCanvas(canvasWidth, canvasHeight);
+   var canvas = createCanvas(canvasWidth, canvasHeight);
+   canvas.parent('sketch-container');
    noFill();
+   textFont('Georgia');
 
    // monitor microphone input
    mic = new p5.AudioIn();
@@ -57,7 +59,7 @@ function startNewTrial(isSuccess) {
 function draw() {
 
    // draw target, cursor history, and score
-   background(200);
+   background(255);
    showTarget();
    showCursorHistory();
    showScore();
@@ -173,8 +175,6 @@ function showScore() {
   fill(0);
   var msg = "Score: " + score.toString() + " out of " + ntrials.toString();
   text(msg, 15, 15);
-  fill(0);
-  text("Press right arrow key to abort trial.\nClick mouse to change the decoder.", canvasWidth-300, 15);
 }
 
 function mouseClicked() {
