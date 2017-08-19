@@ -1,5 +1,5 @@
 var mic, fft, pos, vel, A, B, c, trgPos;
-var gain = 0.001;
+var gain = 0.002;
 var canvasWidth = 700;
 var canvasHeight = 500;
 var circRadius = 25;
@@ -10,8 +10,11 @@ var ntrials = 0;
 var cursorTrace;
 var spectrumSmoothing = 0.8; // between 0.0 and 1.0
 var spectrumBins = 1024; // 2^k for k between 4 and 10
+var spectrum;
 var userInput;
-var nInputDims = 1024; // spectrum.length
+// var nInputDims = 1024; // spectrum.length
+var nInputDims = 50;
+var angs;
 
 function setup() {
    var canvas = createCanvas(canvasWidth, canvasHeight);
@@ -40,8 +43,55 @@ function setDecoder() {
    c = createVector(0, 0);
    A = [createVector(0.5, 0), createVector(0, 0.5)];
    B = new Array();
+
+   var nextMax = random(0, 3);
+   var ang = random(2*PI);
+   var nq1 = 0, nq2 = 0, nq3 = 0, nq4 = 0;
+   var maxnq = (B.length+1)/4;
+   var deg = 180*ang/PI;
+   angs = new Array();
+   // pick a new random angle every 3 or so indices
+   // and try to prevent picking angles in the same quadrants
    for (i = 0; i<nInputDims; i++) {
-       B = concat(B, p5.Vector.random2D());
+      if (i > nextMax) {
+         ang = random(2*PI);
+         nextMax = random(i, i+3);
+      }
+      ang = ang + random(-PI/6, PI/6); // jitter
+
+      if (cos(ang) < 0 && sin(ang) < 0) {
+         nq1 = nq1 + 1;
+         ang = chooseNewAngleIfTooMany(nq1, maxnq, ang);
+      } else if (cos(ang) < 0 && sin(ang) > 0) {
+         nq2 = nq2 + 1;
+         ang = chooseNewAngleIfTooMany(nq2, maxnq, ang);
+      } else if (cos(ang) > 0 && sin(ang) < 0) {
+         nq3 = nq3 + 1;
+         ang = chooseNewAngleIfTooMany(nq3, maxnq, ang);
+      } else if (cos(ang) > 0 && sin(ang) > 0) {
+         nq4 = nq4 + 1;
+         ang = chooseNewAngleIfTooMany(nq4, maxnq, ang);
+      }
+      deg = 180*ang/PI;
+      if (deg > 315 || deg < 45) {
+         deg = 1;
+      } else if (deg >= 45 && deg < 135) {
+         deg = 2;
+      } else if (deg >= 135 && deg < 225) {
+         deg = 3;
+      } else {
+         deg = 4;
+      }
+      angs = concat(angs, deg);
+      B = concat(B, createVector(cos(ang), sin(ang)));
+   }
+}
+
+function chooseNewAngleIfTooMany(nq, maxN, ang) {
+   if (nq < maxN) {
+      return ang;
+   } else {
+      return random(2*PI);
    }
 }
 
@@ -74,20 +124,50 @@ function draw() {
 }
 
 function getAndShowInput() {
-   var spectrum = fft.analyze();
-   var amps = fft.logAverages(fft.getOctaveBands());
+   spectrum = fft.analyze(spectrumBins);
    noFill();
-   stroke(0);
-   beginShape();
-   for (i = 0; i<spectrum.length; i++) {
-    vertex(i, map(spectrum[i], 0, 255, height, 0) );
-   }
-   // for (i = 0; i<amps.length; i++) {      
-   //    var vx = map(i, 0, amps.length, 0, width);
-   //    vertex(vx, map(amps[i], 0, 255, height, 0) );
+   var c = color(255, 187, 0);
+   strokeWeight(2);
+   stroke(c);
+
+   // beginShape();
+   // for (i = 0; i<spectrum.length; i++) {
+   //    vertex(i, map(spectrum[i], 0, 255, height, 0) );
    // }
+   // endShape();
+   // userInput = spectrum;
+
+   beginShape();
+   var amps = fft.logAverages(fft.getOctaveBands(3));
+   for (i = 0; i<amps.length; i++) {      
+      var vx = map(i, 0, amps.length, 0, width);
+      vertex(vx, map(amps[i], 0, 255, height, height/2));
+   }
    endShape();
-   userInput = spectrum;
+   userInput = amps;
+
+   var d = color(100);
+   stroke(d);
+   strokeWeight(1);
+   beginShape();
+   for (i = 0; i<angs.length; i++) {      
+      var vx = map(i, 0, angs.length, 0, width);
+      // vertex(vx, map(angs[i], 0, 360, height, height/2));
+      vertex(vx, map(angs[i], 1, 4, height, height/2));
+   }
+   endShape();
+
+   // var vals = new Array();
+   // var freqBins = new Array("bass", "lowMid", "mid", "highMid", "treble");
+   // beginShape();
+   // for (i = 0; i<freqBins.length; i++) {
+   //    var eng = fft.getEnergy(freqBins[i]);
+   //    append(vals, eng);
+   //    vertex(i, map(eng, 0, 255, height, 0));
+   // }
+   // endShape();
+   // userInput = vals;
+   
 }
 
 function showCursorHistory() {
@@ -164,8 +244,6 @@ function checkIfCursorAcquiredTarget() {
       fill(clr);
       noStroke();
       ellipse(trgPos.x, trgPos.y, trgRadius);
-      score = score + 1;
-      setTimeout("test", 5000);
       startNewTrial(true);
    }
 }
@@ -173,6 +251,7 @@ function checkIfCursorAcquiredTarget() {
 function showScore() {
   textSize(16);
   fill(0);
+  strokeWeight(1);
   var msg = "Score: " + score.toString() + " out of " + ntrials.toString();
   text(msg, 15, 15);
 }
