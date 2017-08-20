@@ -3,8 +3,6 @@ var gain = 0.002;
 var canvasWidth = 700;
 var canvasHeight = 500;
 var circRadius = 25;
-var trgRadius = 50;
-var trgDistance = 200;
 var score = 0;
 var ntrials = 0;
 var cursorTrace;
@@ -13,8 +11,23 @@ var spectrumBins = 1024; // 2^k for k between 4 and 10
 var spectrum;
 var userInput;
 // var nInputDims = 1024; // spectrum.length
-var nInputDims = 50;
-var angs;
+var nInputDims = 32;
+var showCheat = false;
+
+var pdClrInds; // for cheating
+var trgRadius = 50;
+var trgDistance = 200;
+var curTrgInd = 0;
+var curTrgClr = 0;
+var trgAngs = new Array(0, 45, 90, 135, 180, 225, 270, 315);
+var trgClrs = [[0.8431,0.1882,0.1529],
+   [0.9569,0.4275,0.2627],
+   [0.9922,0.6824,0.3804],
+   [0.9961,0.8784,0.5451],
+   [0.8510,0.9373,0.5451],
+   [0.6510,0.8510,0.4157],
+   [0.4000,0.7412,0.3882],
+   [0.1020,0.5961,0.3137]];
 
 function setup() {
    var canvas = createCanvas(canvasWidth, canvasHeight);
@@ -44,54 +57,28 @@ function setDecoder() {
    A = [createVector(0.5, 0), createVector(0, 0.5)];
    B = new Array();
 
-   var nextMax = random(0, 3);
-   var ang = random(2*PI);
-   var nq1 = 0, nq2 = 0, nq3 = 0, nq4 = 0;
-   var maxnq = (B.length+1)/4;
-   var deg = 180*ang/PI;
-   angs = new Array();
-   // pick a new random angle every 3 or so indices
-   // and try to prevent picking angles in the same quadrants
+   var nextMax = -2;
+   var j = -1;
+   var pdInds = new Array(); // pushing directions
+   pdInds = new Array(0, 1, 2, 3, 4, 5, 6, 7);
+   pdInds = shuffle(pdInds);
+   var pd;
+   pdClrInds = new Array();
+   // angs = new Array();
    for (i = 0; i<nInputDims; i++) {
-      if (i > nextMax) {
-         ang = random(2*PI);
-         nextMax = random(i, i+3);
+      if (i > nextMax) { // move to next quadrant
+         j = j + 1;
+         nextMax = random(i+2, i+4); // index of next quadrant change
       }
-      ang = ang + random(-PI/6, PI/6); // jitter
-
-      if (cos(ang) < 0 && sin(ang) < 0) {
-         nq1 = nq1 + 1;
-         ang = chooseNewAngleIfTooMany(nq1, maxnq, ang);
-      } else if (cos(ang) < 0 && sin(ang) > 0) {
-         nq2 = nq2 + 1;
-         ang = chooseNewAngleIfTooMany(nq2, maxnq, ang);
-      } else if (cos(ang) > 0 && sin(ang) < 0) {
-         nq3 = nq3 + 1;
-         ang = chooseNewAngleIfTooMany(nq3, maxnq, ang);
-      } else if (cos(ang) > 0 && sin(ang) > 0) {
-         nq4 = nq4 + 1;
-         ang = chooseNewAngleIfTooMany(nq4, maxnq, ang);
+      if (j == pdInds.length) {
+         j = 0;
+         pdInds = shuffle(pdInds);
       }
-      deg = 180*ang/PI;
-      if (deg > 315 || deg < 45) {
-         deg = 1;
-      } else if (deg >= 45 && deg < 135) {
-         deg = 2;
-      } else if (deg >= 135 && deg < 225) {
-         deg = 3;
-      } else {
-         deg = 4;
-      }
-      angs = concat(angs, deg);
+      pd = trgAngs[pdInds[j]]; // current quadrant
+      pd = pd + random(-10, 10); // add jitter
+      pdClrInds = concat(pdClrInds, pdInds[j]);
+      ang = pd*PI/180; // convert to radians
       B = concat(B, createVector(cos(ang), sin(ang)));
-   }
-}
-
-function chooseNewAngleIfTooMany(nq, maxN, ang) {
-   if (nq < maxN) {
-      return ang;
-   } else {
-      return random(2*PI);
    }
 }
 
@@ -127,15 +114,8 @@ function getAndShowInput() {
    spectrum = fft.analyze(spectrumBins);
    noFill();
    var c = color(255, 187, 0);
-   strokeWeight(2);
    stroke(c);
-
-   // beginShape();
-   // for (i = 0; i<spectrum.length; i++) {
-   //    vertex(i, map(spectrum[i], 0, 255, height, 0) );
-   // }
-   // endShape();
-   // userInput = spectrum;
+   strokeWeight(2);
 
    beginShape();
    var amps = fft.logAverages(fft.getOctaveBands(3));
@@ -146,28 +126,21 @@ function getAndShowInput() {
    endShape();
    userInput = amps;
 
-   // var d = color(100);
-   // stroke(d);
-   // strokeWeight(1);
-   // beginShape();
-   // for (i = 0; i<angs.length; i++) {      
-   //    var vx = map(i, 0, angs.length, 0, width);
-   //    // vertex(vx, map(angs[i], 0, 360, height, height/2));
-   //    vertex(vx, map(angs[i], 1, 4, height, height/2));
-   // }
-   // endShape();
-
-   // var vals = new Array();
-   // var freqBins = new Array("bass", "lowMid", "mid", "highMid", "treble");
-   // beginShape();
-   // for (i = 0; i<freqBins.length; i++) {
-   //    var eng = fft.getEnergy(freqBins[i]);
-   //    append(vals, eng);
-   //    vertex(i, map(eng, 0, 255, height, 0));
-   // }
-   // endShape();
-   // userInput = vals;
-   
+   if (showCheat) {
+      strokeWeight(2);
+      var curClr;
+      for (i = 0; i<pdClrInds.length; i++) {
+         curClr = trgClrs[pdClrInds[i]];
+         curClr = color(255*curClr[0], 255*curClr[1], 255*curClr[2]);
+         stroke(curClr);
+         fill(curClr);
+         var vx = map(i, 0, pdClrInds.length, 0, width);
+         // line(vx, height, vx, 7*height/8);
+         ellipse(vx, height, 0.5*width/pdClrInds.length);
+         // map(pdClrInds[i], -1, 7, height, 3*height/4));
+      }
+      noFill();
+   }
 }
 
 function showCursorHistory() {
@@ -193,14 +166,16 @@ function updateAndDrawCursor() {
 }
 
 function showTarget() {
-   var clr = color(50, 54, 200);
+   var clr = color(255*curTrgClr[0], 255*curTrgClr[1], 255*curTrgClr[2]);
    fill(clr);
    noStroke();
    ellipse(trgPos.x, trgPos.y, trgRadius); // x, y, w, h
 }
 
 function setRandomTarget() {
-   var angle = random([0, 45, 90, 135, 180, 225, 270, 315])*PI/180;
+   curTrgInd = random([0,1,2,3,4,5,6,7]);
+   var angle = trgAngs[curTrgInd]*PI/180;
+   curTrgClr = trgClrs[curTrgInd];
    trgPos = createVector(cos(angle), sin(angle));
    trgPos.mult(trgDistance);
    trgPos.add(canvasWidth/2.0, canvasHeight/2.0);
@@ -263,5 +238,8 @@ function mouseClicked() {
 function keyPressed() {
    if (keyCode === RIGHT_ARROW) {
       startNewTrial(false);
+   }
+   if (keyCode === UP_ARROW) {
+      showCheat = !showCheat;
    }
 }
